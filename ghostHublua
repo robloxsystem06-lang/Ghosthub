@@ -1,0 +1,725 @@
+-- ============================================
+-- 👻 GHOST HUB v2.0 - COMPLETO PARA BLOX FRUITS
+-- Junto em um único arquivo para loadstring
+-- ============================================
+
+-- Anti-Detecção
+local function AntiDetection()
+    pcall(function()
+        getgenv().GhostHub = nil
+        getgenv().Farm = nil
+        getgenv().Config = nil
+    end)
+    
+    task.spawn(function()
+        while true do
+            task.wait(math.random(60, 180))
+            pcall(function()
+                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0,0,0,true,nil,0)
+                task.wait(0.01)
+                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0,0,0,false,nil,0)
+            end)
+        end
+    end)
+end
+
+-- ============================================
+-- CONFIGURAÇÕES
+-- ============================================
+local Config = {
+    AutoFarm = false,
+    AutoFarmRange = 200,
+    BringMob = false,
+    FastAttack = false,
+    AutoQuest = false,
+    AutoHaki = false,
+    AutoKen = false,
+    AutoSoru = false,
+    AutoBuso = false,
+    AutoStats = false,
+    AutoSeaBeast = false,
+    AutoBoss = false,
+    AutoFruitSniper = false,
+    ESPFruits = false,
+    ESPEnemies = false,
+    ESPChests = false,
+    ESPPlayers = false,
+    AntiAFK = true,
+    AutoEquip = true,
+    WeaponPriority = "Sword",
+    UITheme = "Dark",
+    FlyEnabled = false,
+    FlySpeed = 50
+}
+
+-- ============================================
+-- TEMA (Dark/Light)
+-- ============================================
+local Theme = {
+    Dark = {
+        Bg = Color3.fromRGB(18,13,28),
+        Bg2 = Color3.fromRGB(26,20,40),
+        Bg3 = Color3.fromRGB(35,28,50),
+        Text = Color3.fromRGB(220,210,255),
+        Text2 = Color3.fromRGB(160,150,190),
+        Accent = Color3.fromRGB(140,100,255),
+        Green = Color3.fromRGB(0,200,80),
+        Red = Color3.fromRGB(255,60,60),
+        Border = Color3.fromRGB(60,45,90)
+    },
+    Light = {
+        Bg = Color3.fromRGB(235,232,245),
+        Bg2 = Color3.fromRGB(250,248,255),
+        Bg3 = Color3.fromRGB(225,220,240),
+        Text = Color3.fromRGB(30,25,50),
+        Text2 = Color3.fromRGB(80,75,100),
+        Accent = Color3.fromRGB(120,80,230),
+        Green = Color3.fromRGB(0,180,70),
+        Red = Color3.fromRGB(220,50,50),
+        Border = Color3.fromRGB(180,175,200)
+    }
+}
+
+local CurrentTheme = Theme[Config.UITheme] or Theme.Dark
+
+-- ============================================
+-- SERVIÇOS
+-- ============================================
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ============================================
+-- FUNÇÕES UTILITÁRIAS
+-- ============================================
+local function GetCharacter()
+    return LocalPlayer.Character
+end
+
+local function GetHRP()
+    local c = GetCharacter()
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function GetHumanoid()
+    local c = GetCharacter()
+    return c and c:FindFirstChild("Humanoid")
+end
+
+local function GetEnemies()
+    local list = {}
+    local folder = Workspace:FindFirstChild("Enemies")
+    if not folder then return list end
+    for _, e in pairs(folder:GetChildren()) do
+        pcall(function()
+            if e:FindFirstChild("Humanoid") and e.Humanoid.Health > 0 and e:FindFirstChild("HumanoidRootPart") then
+                table.insert(list, e)
+            end
+        end)
+    end
+    return list
+end
+
+local function GetNearestEnemy(range)
+    local hrp = GetHRP()
+    if not hrp then return nil end
+    local best, bestDist = nil, range or Config.AutoFarmRange
+    for _, e in pairs(GetEnemies()) do
+        local dist = (e.HumanoidRootPart.Position - hrp.Position).Magnitude
+        if dist < bestDist then bestDist = dist best = e end
+    end
+    return best
+end
+
+local function EquipWeapon()
+    if not Config.AutoEquip then return end
+    local h = GetHumanoid()
+    if not h then return end
+    local keyword = Config.WeaponPriority == "Sword" and "sword" or ""
+    for _, t in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if t:IsA("Tool") and (keyword == "" or t.Name:lower():find(keyword)) then
+            h:EquipTool(t)
+            return
+        end
+    end
+    for _, t in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if t:IsA("Tool") then h:EquipTool(t) return end
+    end
+end
+
+local function Attack()
+    local delay = Config.FastAttack and 0.03 or 0.08
+    for i = 1, 6 do
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,nil,0)
+            task.wait(delay)
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,nil,0)
+            task.wait(delay)
+        end)
+    end
+end
+
+-- ============================================
+-- UI - INTERFACE
+-- ============================================
+local function CreateUI()
+    local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+    gui.Name = "GhostHub"
+    gui.ResetOnSpawn = false
+    
+    -- Botão Toggle
+    local btn = Instance.new("TextButton", gui)
+    btn.Size = UDim2.new(0, 48, 0, 48)
+    btn.Position = UDim2.new(0, 12, 0.5, -24)
+    btn.BackgroundColor3 = CurrentTheme.Accent
+    btn.Text = "👻"
+    btn.TextSize = 24
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+    
+    -- Painel
+    local panel = Instance.new("Frame", gui)
+    panel.Size = UDim2.new(0, 580, 0, 400)
+    panel.Position = UDim2.new(0.5, -290, 0.5, -200)
+    panel.BackgroundColor3 = CurrentTheme.Bg
+    panel.Visible = false
+    panel.BorderSizePixel = 0
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
+    
+    -- Header
+    local header = Instance.new("Frame", panel)
+    header.Size = UDim2.new(1, 0, 0, 42)
+    header.BackgroundColor3 = CurrentTheme.Accent
+    header.BorderSizePixel = 0
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
+    
+    local title = Instance.new("TextLabel", header)
+    title.Size = UDim2.new(1, 0, 1, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "👻 GHOST HUB v2.0"
+    title.TextColor3 = Color3.new(1,1,1)
+    title.TextSize = 16
+    title.Font = Enum.Font.GothamBlack
+    
+    -- Sidebar
+    local sidebar = Instance.new("Frame", panel)
+    sidebar.Size = UDim2.new(0, 140, 1, -42)
+    sidebar.Position = UDim2.new(0, 0, 0, 42)
+    sidebar.BackgroundColor3 = CurrentTheme.Bg2
+    sidebar.BorderSizePixel = 0
+    Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 10)
+    
+    local sideList = Instance.new("UIListLayout", sidebar)
+    sideList.Padding = UDim.new(0, 3)
+    sideList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    
+    local sideScroll = Instance.new("ScrollingFrame", sidebar)
+    sideScroll.Size = UDim2.new(1, -8, 1, -8)
+    sideScroll.Position = UDim2.new(0, 4, 0, 4)
+    sideScroll.BackgroundTransparency = 1
+    sideScroll.ScrollBarThickness = 2
+    sideScroll.ScrollBarImageColor3 = CurrentTheme.Accent
+    sideScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    
+    -- Área de conteúdo
+    local content = Instance.new("Frame", panel)
+    content.Size = UDim2.new(1, -150, 1, -50)
+    content.Position = UDim2.new(0, 145, 0, 47)
+    content.BackgroundColor3 = CurrentTheme.Bg3
+    content.BorderSizePixel = 0
+    Instance.new("UICorner", content).CornerRadius = UDim.new(0, 8)
+    
+    local contentScroll = Instance.new("ScrollingFrame", content)
+    contentScroll.Size = UDim2.new(1, -10, 1, -10)
+    contentScroll.Position = UDim2.new(0, 5, 0, 5)
+    contentScroll.BackgroundTransparency = 1
+    contentScroll.ScrollBarThickness = 3
+    contentScroll.ScrollBarImageColor3 = CurrentTheme.Accent
+    contentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    
+    local contentList = Instance.new("UIListLayout", contentScroll)
+    contentList.Padding = UDim.new(0, 5)
+    contentList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    
+    -- Status bar
+    local status = Instance.new("TextLabel", panel)
+    status.Size = UDim2.new(1, -20, 0, 25)
+    status.Position = UDim2.new(0, 10, 1, -30)
+    status.BackgroundColor3 = CurrentTheme.Bg2
+    status.BorderSizePixel = 0
+    status.Text = "👻 Pronto!"
+    status.TextColor3 = CurrentTheme.Text
+    status.TextSize = 11
+    status.Font = Enum.Font.Gotham
+    Instance.new("UICorner", status).CornerRadius = UDim.new(0, 6)
+    
+    -- Sistema de abas
+    local tabs = {
+        {n="⚔️ Farm", p=nil},
+        {n="👑 Bosses", p=nil},
+        {n="👁️ ESP", p=nil},
+        {n="🍈 Frutas", p=nil},
+        {n="💪 Skills", p=nil},
+        {n="⚙️ Config", p=nil}
+    }
+    
+    local tabBtns = {}
+    local pages = {}
+    
+    for _, t in ipairs(tabs) do
+        local tb = Instance.new("TextButton", sideScroll)
+        tb.Size = UDim2.new(1, -6, 0, 34)
+        tb.BackgroundColor3 = CurrentTheme.Bg3
+        tb.BorderSizePixel = 0
+        tb.Text = t.n
+        tb.TextColor3 = CurrentTheme.Text
+        tb.TextSize = 12
+        tb.Font = Enum.Font.GothamBold
+        tb.AutoButtonColor = false
+        Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 6)
+        
+        local pg = Instance.new("Frame", contentScroll)
+        pg.Size = UDim2.new(1, 0, 1, 0)
+        pg.BackgroundTransparency = 1
+        pg.Visible = false
+        
+        local pl = Instance.new("UIListLayout", pg)
+        pl.Padding = UDim.new(0, 4)
+        pl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        
+        table.insert(tabBtns, tb)
+        table.insert(pages, pg)
+        t.p = pg
+        
+        tb.MouseButton1Click:Connect(function()
+            for _, b in ipairs(tabBtns) do b.BackgroundColor3 = CurrentTheme.Bg3 end
+            for _, p in ipairs(pages) do p.Visible = false end
+            tb.BackgroundColor3 = CurrentTheme.Accent
+            tb.TextColor3 = Color3.new(1,1,1)
+            pg.Visible = true
+            contentScroll.CanvasSize = UDim2.new(0,0,0,pl.AbsoluteContentSize.Y + 10)
+        end)
+    end
+    
+    -- Mostrar primeira aba
+    if tabBtns[1] then
+        tabBtns[1].BackgroundColor3 = CurrentTheme.Accent
+        tabBtns[1].TextColor3 = Color3.new(1,1,1)
+        pages[1].Visible = true
+    end
+    
+    -- Função Toggle
+    local function AddToggle(page, name, default, callback)
+        local f = Instance.new("Frame", page)
+        f.Size = UDim2.new(1, 0, 0, 36)
+        f.BackgroundColor3 = CurrentTheme.Bg2
+        f.BorderSizePixel = 0
+        Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
+        
+        local l = Instance.new("TextLabel", f)
+        l.Size = UDim2.new(0, 180, 1, 0)
+        l.Position = UDim2.new(0, 10, 0, 0)
+        l.BackgroundTransparency = 1
+        l.Text = name
+        l.TextColor3 = CurrentTheme.Text
+        l.TextSize = 12
+        l.Font = Enum.Font.GothamBold
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        
+        local s = Instance.new("TextButton", f)
+        s.Size = UDim2.new(0, 40, 0, 18)
+        s.Position = UDim2.new(1, -50, 0, 9)
+        s.BackgroundColor3 = default and CurrentTheme.Green or CurrentTheme.Red
+        s.BorderSizePixel = 0
+        s.Text = default and "ON" or "OFF"
+        s.TextColor3 = Color3.new(1,1,1)
+        s.TextSize = 9
+        s.Font = Enum.Font.GothamBlack
+        s.AutoButtonColor = false
+        Instance.new("UICorner", s).CornerRadius = UDim.new(0, 4)
+        
+        local active = default or false
+        
+        local bt = Instance.new("TextButton", f)
+        bt.Size = UDim2.new(1, 0, 1, 0)
+        bt.BackgroundTransparency = 1
+        bt.Text = ""
+        bt.Parent = f
+        
+        bt.MouseButton1Click:Connect(function()
+            active = not active
+            s.BackgroundColor3 = active and CurrentTheme.Green or CurrentTheme.Red
+            s.Text = active and "ON" or "OFF"
+            if callback then callback(active) end
+        end)
+    end
+    
+    local function AddSlider(page, name, min, max, default, callback)
+        local f = Instance.new("Frame", page)
+        f.Size = UDim2.new(1, 0, 0, 50)
+        f.BackgroundColor3 = CurrentTheme.Bg2
+        f.BorderSizePixel = 0
+        Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
+        
+        local l = Instance.new("TextLabel", f)
+        l.Size = UDim2.new(1, -20, 0, 16)
+        l.Position = UDim2.new(0, 10, 0, 3)
+        l.BackgroundTransparency = 1
+        l.Text = name .. ": " .. default
+        l.TextColor3 = CurrentTheme.Text
+        l.TextSize = 11
+        l.Font = Enum.Font.GothamBold
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        
+        local bg = Instance.new("Frame", f)
+        bg.Size = UDim2.new(1, -40, 0, 6)
+        bg.Position = UDim2.new(0, 20, 0, 25)
+        bg.BackgroundColor3 = CurrentTheme.Border
+        bg.BorderSizePixel = 0
+        Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 3)
+        
+        local fill = Instance.new("Frame", bg)
+        fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+        fill.BackgroundColor3 = CurrentTheme.Accent
+        fill.BorderSizePixel = 0
+        Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
+        
+        local sld = Instance.new("TextButton", f)
+        sld.Size = UDim2.new(1, 0, 1, 0)
+        sld.BackgroundTransparency = 1
+        sld.Text = ""
+        
+        sld.MouseButton1Down:Connect(function()
+            local conn
+            conn = RunService.RenderStepped:Connect(function()
+                local pos = UserInputService:GetMouseLocation()
+                local bp = bg.AbsolutePosition
+                local bs = bg.AbsoluteSize
+                local pct = math.clamp((pos.X - bp.X) / bs.X, 0, 1)
+                local val = math.floor(min + (max - min) * pct)
+                fill.Size = UDim2.new(pct, 0, 1, 0)
+                l.Text = name .. ": " .. val
+                if callback then callback(val) end
+            end)
+            UserInputService.InputEnded:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1 then conn:Disconnect() end
+            end)
+        end)
+    end
+    
+    local function AddButton(page, name, callback)
+        local b = Instance.new("TextButton", page)
+        b.Size = UDim2.new(1, 0, 0, 34)
+        b.BackgroundColor3 = CurrentTheme.Accent
+        b.BorderSizePixel = 0
+        b.Text = name
+        b.TextColor3 = Color3.new(1,1,1)
+        b.TextSize = 12
+        b.Font = Enum.Font.GothamBold
+        b.AutoButtonColor = false
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+        b.MouseButton1Click:Connect(function() if callback then callback() end end)
+    end
+    
+    local function AddDropdown(page, name, options, default, callback)
+        local f = Instance.new("Frame", page)
+        f.Size = UDim2.new(1, 0, 0, 36)
+        f.BackgroundColor3 = CurrentTheme.Bg2
+        f.BorderSizePixel = 0
+        Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
+        
+        local l = Instance.new("TextLabel", f)
+        l.Size = UDim2.new(0, 100, 1, 0)
+        l.Position = UDim2.new(0, 10, 0, 0)
+        l.BackgroundTransparency = 1
+        l.Text = name
+        l.TextColor3 = CurrentTheme.Text
+        l.TextSize = 12
+        l.Font = Enum.Font.GothamBold
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        
+        local idx = 1
+        for i, o in ipairs(options) do if o == default then idx = i break end end
+        
+        local dd = Instance.new("TextButton", f)
+        dd.Size = UDim2.new(0, 110, 0, 22)
+        dd.Position = UDim2.new(1, -120, 0, 7)
+        dd.BackgroundColor3 = CurrentTheme.Accent
+        dd.BorderSizePixel = 0
+        dd.Text = options[idx]
+        dd.TextColor3 = Color3.new(1,1,1)
+        dd.TextSize = 10
+        dd.Font = Enum.Font.GothamBold
+        dd.AutoButtonColor = false
+        Instance.new("UICorner", dd).CornerRadius = UDim.new(0, 4)
+        
+        dd.MouseButton1Click:Connect(function()
+            idx = idx + 1
+            if idx > #options then idx = 1 end
+            dd.Text = options[idx]
+            if callback then callback(options[idx]) end
+        end)
+    end
+    
+    -- ========== PREENCHER ABAS ==========
+    
+    -- Farm Tab
+    AddToggle(tabs[1].p, "Auto Farm", Config.AutoFarm, function(v) Config.AutoFarm = v end)
+    AddSlider(tabs[1].p, "Alcance", 10, 500, Config.AutoFarmRange, function(v) Config.AutoFarmRange = v end)
+    AddToggle(tabs[1].p, "Bring Mob", Config.BringMob, function(v) Config.BringMob = v end)
+    AddToggle(tabs[1].p, "Fast Attack", Config.FastAttack, function(v) Config.FastAttack = v end)
+    AddToggle(tabs[1].p, "Auto Quest", Config.AutoQuest, function(v) Config.AutoQuest = v end)
+    AddToggle(tabs[1].p, "Auto Equip", Config.AutoEquip, function(v) Config.AutoEquip = v end)
+    AddDropdown(tabs[1].p, "Arma", {"Sword", "Gun", "Fruit", "Melee"}, Config.WeaponPriority, function(v) Config.WeaponPriority = v end)
+    
+    -- Bosses Tab
+    AddToggle(tabs[2].p, "Auto Boss", Config.AutoBoss, function(v) Config.AutoBoss = v end)
+    AddToggle(tabs[2].p, "Auto Sea Beast", Config.AutoSeaBeast, function(v) Config.AutoSeaBeast = v end)
+    
+    -- ESP Tab
+    AddToggle(tabs[3].p, "ESP Frutas", Config.ESPFruits, function(v) Config.ESPFruits = v end)
+    AddToggle(tabs[3].p, "ESP Inimigos", Config.ESPEnemies, function(v) Config.ESPEnemies = v end)
+    AddToggle(tabs[3].p, "ESP Baús", Config.ESPChests, function(v) Config.ESPChests = v end)
+    AddToggle(tabs[3].p, "ESP Players", Config.ESPPlayers, function(v) Config.ESPPlayers = v end)
+    
+    -- Frutas Tab
+    AddToggle(tabs[4].p, "Auto Fruit Sniper", Config.AutoFruitSniper, function(v) Config.AutoFruitSniper = v end)
+    
+    -- Skills Tab
+    AddToggle(tabs[5].p, "Auto Haki", Config.AutoHaki, function(v) Config.AutoHaki = v end)
+    AddToggle(tabs[5].p, "Auto Ken", Config.AutoKen, function(v) Config.AutoKen = v end)
+    AddToggle(tabs[5].p, "Auto Soru", Config.AutoSoru, function(v) Config.AutoSoru = v end)
+    AddToggle(tabs[5].p, "Auto Buso", Config.AutoBuso, function(v) Config.AutoBuso = v end)
+    AddToggle(tabs[5].p, "Auto Stats", Config.AutoStats, function(v) Config.AutoStats = v end)
+    
+    -- Config Tab
+    AddToggle(tabs[6].p, "Anti AFK", Config.AntiAFK, function(v) Config.AntiAFK = v end)
+    AddToggle(tabs[6].p, "Fly", Config.FlyEnabled, function(v) Config.FlyEnabled = v end)
+    AddSlider(tabs[6].p, "Fly Speed", 10, 200, Config.FlySpeed, function(v) Config.FlySpeed = v end)
+    
+    -- Eventos
+    btn.MouseButton1Click:Connect(function() panel.Visible = not panel.Visible end)
+    
+    -- Arrastar
+    local drag, startPos, startMouse
+    header.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+            drag = true startMouse = i.Position startPos = panel.Position
+        end
+    end)
+    header.InputEnded:Connect(function() drag = false end)
+    UserInputService.InputChanged:Connect(function(i)
+        if drag then
+            local d = i.Position - startMouse
+            panel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X, startPos.Y.Scale, startPos.Y.Offset+d.Y)
+        end
+    end)
+    
+    -- Arrastar botão
+    local bdrag, bstart, bpos
+    btn.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.Touch then
+            bdrag = true bstart = i.Position bpos = btn.Position
+        end
+    end)
+    btn.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.Touch and (i.Position - bstart).Magnitude < 8 then
+            panel.Visible = not panel.Visible
+        end
+        bdrag = false
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if bdrag then
+            local d = i.Position - bstart
+                        btn.Position = UDim2.new(bpos.X.Scale, bpos.X.Offset+d.X, bpos.Y.Scale, bpos.Y.Offset+d.Y)
+        end
+    end)
+    
+    return status
+end
+
+-- ============================================
+-- SISTEMA ESP
+-- ============================================
+local ESPObjects = {}
+
+local function UpdateESP()
+    for _, o in pairs(ESPObjects) do pcall(function() o:Destroy() end) end
+    ESPObjects = {}
+    
+    if Config.ESPFruits then
+        for _, o in pairs(Workspace:GetDescendants()) do
+            pcall(function()
+                if o:IsA("BasePart") and o.Name:lower():find("fruit") and o.Name ~= "Fruit" then
+                    local h = Instance.new("Highlight")
+                    h.FillColor = Color3.fromRGB(255,180,0)
+                    h.Parent = o
+                    table.insert(ESPObjects, h)
+                end
+            end)
+        end
+    end
+    
+    if Config.ESPChests then
+        for _, o in pairs(Workspace:GetDescendants()) do
+            pcall(function()
+                if o:IsA("BasePart") and o.Name:lower():find("chest") then
+                    local h = Instance.new("Highlight")
+                    h.FillColor = Color3.fromRGB(255,255,0)
+                    h.Parent = o
+                    table.insert(ESPObjects, h)
+                end
+            end)
+        end
+    end
+    
+    if Config.ESPEnemies then
+        for _, e in pairs(GetEnemies()) do
+            pcall(function()
+                local h = Instance.new("Highlight")
+                h.FillColor = Color3.fromRGB(255,80,80)
+                h.Parent = e
+                table.insert(ESPObjects, h)
+            end)
+        end
+    end
+    
+    if Config.ESPPlayers then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                pcall(function()
+                    local h = Instance.new("Highlight")
+                    h.FillColor = Color3.fromRGB(0,150,255)
+                    h.Parent = p.Character
+                    table.insert(ESPObjects, h)
+                end)
+            end
+        end
+    end
+end
+
+-- ============================================
+-- INICIALIZAÇÃO
+-- ============================================
+AntiDetection()
+local statusLabel = CreateUI()
+
+-- ============================================
+-- LOOP PRINCIPAL
+-- ============================================
+task.spawn(function()
+    while true do
+        pcall(function()
+            local hrp = GetHRP()
+            if not hrp then return end
+            
+            if Config.AntiAFK then
+                VirtualInputManager:SendMouseButtonEvent(0,0,0,true,nil,0)
+                task.wait(0.02)
+                VirtualInputManager:SendMouseButtonEvent(0,0,0,false,nil,0)
+            end
+            
+            if Config.FlyEnabled then
+                local h = GetHumanoid()
+                if h then h.PlatformStand = true hrp.Velocity = Vector3.new(0, Config.FlySpeed, 0) end
+            end
+            
+            if Config.BringMob then
+                for i, e in pairs(GetEnemies()) do
+                    pcall(function()
+                        e.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(math.random(-2,2), 0, -3-i)
+                        e.HumanoidRootPart.Velocity = Vector3.zero
+                    end)
+                end
+            end
+            
+            if Config.AutoFarm then
+                local e = GetNearestEnemy()
+                if e then
+                    statusLabel.Text = "⚔️ " .. e.Name
+                    EquipWeapon()
+                    if not Config.BringMob then hrp.CFrame = e.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5) end
+                    Attack()
+                else
+                    statusLabel.Text = "🔍 Procurando..."
+                end
+            end
+            
+            if Config.AutoQuest then
+                for _, n in pairs(Workspace:GetDescendants()) do
+                    pcall(function()
+                        if n.Name:lower():find("quest") and n:FindFirstChild("Head") and (n.Head.Position - hrp.Position).Magnitude < 50 then
+                            hrp.CFrame = n.Head.CFrame * CFrame.new(0,0,-3)
+                            task.wait(0.3)
+                            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,nil,0)
+                            task.wait(0.1)
+                            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,nil,0)
+                        end
+                    end)
+                end
+            end
+            
+            if Config.AutoBoss then
+                for _, e in pairs(GetEnemies()) do
+                    pcall(function()
+                        if e.Name:lower():find("boss") then
+                            statusLabel.Text = "💀 " .. e.Name
+                            EquipWeapon()
+                            hrp.CFrame = e.HumanoidRootPart.CFrame * CFrame.new(0,0,-5)
+                            Attack()
+                        end
+                    end)
+                end
+            end
+            
+            if Config.AutoSeaBeast then
+                for _, o in pairs(Workspace:GetDescendants()) do
+                    pcall(function()
+                        if o.Name:lower():find("sea") and o:FindFirstChild("Humanoid") and o.Humanoid.Health > 0 then
+                            statusLabel.Text = "🌊 Sea Beast!"
+                            EquipWeapon()
+                            hrp.CFrame = o.HumanoidRootPart.CFrame * CFrame.new(0,0,6)
+                            Attack()
+                        end
+                    end)
+                end
+            end
+            
+            if Config.AutoFruitSniper then
+                for _, o in pairs(Workspace:GetDescendants()) do
+                    pcall(function()
+                        if o:IsA("BasePart") and o.Name:lower():find("fruit") and o.Name ~= "Fruit" then
+                            if (o.Position - hrp.Position).Magnitude < 200 then
+                                hrp.CFrame = o.CFrame + Vector3.new(0, 3, 0)
+                                task.wait(0.5)
+                            end
+                        end
+                    end)
+                end
+            end
+            
+            if Config.AutoHaki then pcall(function() VirtualInputManager:SendKeyEvent(true,"E",false,nil) task.wait(0.1) VirtualInputManager:SendKeyEvent(false,"E",false,nil) end) end
+            if Config.AutoKen then pcall(function() VirtualInputManager:SendKeyEvent(true,"T",false,nil) task.wait(0.1) VirtualInputManager:SendKeyEvent(false,"T",false,nil) end) end
+            if Config.AutoSoru then pcall(function() VirtualInputManager:SendKeyEvent(true,"Q",false,nil) task.wait(0.1) VirtualInputManager:SendKeyEvent(false,"Q",false,nil) end) end
+            if Config.AutoBuso then pcall(function() VirtualInputManager:SendKeyEvent(true,"R",false,nil) task.wait(0.1) VirtualInputManager:SendKeyEvent(false,"R",false,nil) end) end
+            
+        end)
+        task.wait(0.12)
+    end
+end)
+
+-- ESP Loop
+task.spawn(function()
+    while true do
+        pcall(UpdateESP)
+        task.wait(2)
+    end
+end)
+
+print("👻 Ghost Hub v2.0 carregado!")
+print("⚔️ Farm | 👑 Bosses | 👁️ ESP | 🍈 Frutas | 💪 Skills | ⚙️ Config")
